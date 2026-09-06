@@ -1,0 +1,7 @@
+numpy
+pandas
+tables
+matplotlib
+pyyaml
+jupyterlab
+pytest
