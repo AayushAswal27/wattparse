@@ -15,7 +15,7 @@ import pandas as pd
 DEFAULT_THRESHOLDS = {
     "kettle": {"on_power": 1000, "min_on_s": 12, "min_off_s": 0},
     "microwave": {"on_power": 200, "min_on_s": 12, "min_off_s": 30},
-    "dish washer": {"on_power": 10, "min_on_s": 1800, "min_off_s": 1800},
+    "dish washer": {"on_power": 10, "min_on_s": 60, "min_off_s": 60},
     "fridge freezer": {"on_power": 50, "min_on_s": 60, "min_off_s": 12},
     "washer dryer": {"on_power": 20, "min_on_s": 1800, "min_off_s": 160},
 }

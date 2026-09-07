@@ -141,3 +141,49 @@ This pipeline works on high-power, short-duration, distinctive loads and
 degrades sharply on low-power loads near the building's noise floor. For a
 commercial building, that suggests chillers, AHUs and large motors are
 plausible targets; small plug loads are not.
+
+
+## Three appliances: what transfers
+
+Threshold swept on a training house, applied once to house 5.
+
+| Appliance | Peak W | Positives | Train house | House 5 | Drop |
+|---|---|---|---|---|---|
+| Kettle | 2900 | 0.50% | 0.790 (h4) | **0.640** | -19% |
+| Dish washer | 1730 | 2.45% | 0.891 (h2) | **0.456** | -49% |
+| Microwave | 1500 | 0.086% | 0.536 (h4) | **0.049** | -91% |
+
+seq2point beats both baselines on all three appliances and on every metric.
+
+### Dish washer, house 5, 2014-08-01 to 09-01
+
+| Model | MAE (W) | SAE | Precision | Recall | F1 |
+|---|---|---|---|---|---|
+| CO | 313.6 | 17.32 | 0.025 | 1.000 | 0.048 |
+| FHMM | 227.0 | 12.45 | 0.132 | 0.637 | 0.218 |
+| seq2point @ 10 W | 20.0 | 0.63 | 0.161 | 0.903 | 0.274 |
+| **seq2point @ 100 W** | 20.0 | 0.63 | 0.385 | 0.559 | **0.456** |
+
+### Metric bug found and fixed
+
+The dish washer config originally used min_on_s = min_off_s = 1800, taken
+from NILM convention. Applied symmetrically to truth and predictions, this
+bridged the quiet phases mid-cycle in both, inflating truth by 31% and
+predictions by 43%, and producing a degenerate precision of exactly 1.000
+with zero false positives across a 1650 W range of thresholds. It also
+made FHMM appear to beat seq2point (0.221 vs 0.187).
+
+Reduced to 60 s, matching the other appliances. Under the corrected metric
+seq2point wins at every threshold. No retraining was needed - only the
+scoring was wrong.
+
+### What determines transfer
+
+Two factors, both visible above. Amplitude relative to the building's noise
+floor: house 5's baseline sits at 600-1000 W and swings by thousands, so a
+2900 W kettle stays visible while a 1500 W microwave does not. And event
+duration: a dishwasher runs 90 minutes, a microwave 90 seconds.
+
+For a commercial building this favours chillers, AHUs and large motors -
+high power and long running, the good corner of both axes. Small plug loads
+are the opposite corner and this method should not be expected to find them.
