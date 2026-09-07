@@ -40,7 +40,19 @@ TRAIN_WINDOWS = {
     3: ("2013-03-01", "2013-04-01"),
     4: ("2013-04-01", "2013-05-01"),
 }
-TEST_WINDOW = ("2014-07-01", "2014-07-08")
+
+# Must match TEST_WINDOWS in src/evaluate/cross_house.py, or the exported
+# predictions won't cover the window the model is scored on.
+# Per appliance because usage frequency differs by orders of magnitude:
+# house 5's microwave ran ~100 minutes across 4.5 months, so a single week
+# can contain zero events and there is nothing to score against.
+TEST_WINDOWS = {
+    "kettle": ("2014-07-01", "2014-07-08"),
+    "microwave": ("2014-08-01", "2014-09-01"),
+    "dish washer": ("2014-08-01", "2014-09-01"),
+    "fridge freezer": ("2014-07-01", "2014-07-08"),
+    "washer dryer": ("2014-08-01", "2014-09-01"),
+}
 
 
 def load_training_data(appliance, sample_period):
@@ -101,6 +113,7 @@ def main():
     args = ap.parse_args()
 
     appliance, sp = args.appliance, args.sample_period
+    test_start, test_end = TEST_WINDOWS[appliance]
 
     print("training houses:", TRAIN_HOUSES[appliance])
     train_mains, train_app = load_training_data(appliance, sp)
@@ -108,13 +121,13 @@ def main():
         raise SystemExit("no training data found")
 
     test = DataSet(H5)
-    test.set_window(start=TEST_WINDOW[0], end=TEST_WINDOW[1])
+    test.set_window(start=test_start, end=test_end)
     test_elec = test.buildings[TEST_HOUSE].elec
     test_mains = next(test_elec.mains().load(
         sample_period=sp,
         physical_quantity="power", ac_type="apparent"))
     truth = next(test_elec[appliance].load(sample_period=sp))
-    print("test: %d samples" % len(test_mains))
+    print("test: %d samples (%s to %s)" % (len(test_mains), test_start, test_end))
 
     predictions = {}
     for name, model in [("CO", CO({})), ("FHMM", FHMMExact({}))]:

@@ -24,7 +24,17 @@ from src.models.seq2point import Seq2Point
 
 H5 = "data/raw/ukdale.h5"
 TEST_HOUSE = 5
-TEST_WINDOW = ("2014-07-01", "2014-07-08")   # same week as the baselines
+
+# Per appliance: usage frequency differs by orders of magnitude, so a single
+# shared window doesn't work. House 5's microwave ran ~100 minutes across
+# 4.5 months, so a week can contain zero events.
+TEST_WINDOWS = {
+    "kettle": ("2014-07-01", "2014-07-08"),
+    "microwave": ("2014-08-01", "2014-09-01"),
+    "dish washer": ("2014-08-01", "2014-09-01"),
+    "fridge freezer": ("2014-07-01", "2014-07-08"),
+    "washer dryer": ("2014-08-01", "2014-09-01"),
+}
 
 
 def predict(model, X, norm, device, batch_size=512):
@@ -79,6 +89,7 @@ def main():
     appliance = args.appliance
     slug = appliance.replace(" ", "_")
     ckpt_path = Path(args.checkpoint or ("models/seq2point_%s.pt" % slug))
+    test_start, test_end = TEST_WINDOWS[appliance]
 
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
@@ -89,8 +100,7 @@ def main():
     print("loaded %s (trained on %s)" % (ckpt_path, ckpt["appliance"]))
     print("normaliser:", {k: round(v, 1) for k, v in norm.to_dict().items()})
 
-    df = align(H5, TEST_HOUSE, appliance,
-               start=TEST_WINDOW[0], end=TEST_WINDOW[1])
+    df = align(H5, TEST_HOUSE, appliance, start=test_start, end=test_end)
     X, y = make_windows(df, appliance, stride=1)
     print("house %d: %d windows" % (TEST_HOUSE, len(X)))
 
@@ -103,10 +113,10 @@ def main():
     truth = pd.Series(y, index=idx, name="truth")
 
     print("\nseq2point on house %d, %s to %s"
-          % (TEST_HOUSE, TEST_WINDOW[0], TEST_WINDOW[1]))
+          % (TEST_HOUSE, test_start, test_end))
     print(pd.DataFrame([score(pred, truth, appliance)]).round(3).to_string(index=False))
 
-    # Baselines cover the same week but the full index, so join on ours.
+    # Baselines cover the same window but the full index, so join on ours.
     base_path = Path("data/processed/baseline_%s.csv" % slug)
     if base_path.exists():
         base = pd.read_csv(base_path, index_col=0, parse_dates=True)
