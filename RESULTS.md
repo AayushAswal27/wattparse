@@ -76,3 +76,20 @@ Applying 1550 W once to house 5:
 
 The threshold was selected on house 4 and applied once to house 5, not
 swept on the test house.
+
+## Prediction clamping
+
+Negative predictions clamped to zero at prediction time. MAE 36.9 -> 28.2 W.
+State metrics unchanged (negatives were all below the decision threshold).
+
+SAE went 0.606 -> 1.134. The pre-clamp figure was flattered by negative
+predictions cancelling part of the over-prediction; 1.134 is the honest
+energy error and matters for the Phase 5 costing head.
+
+## Failed experiment: output ReLU
+
+Predictions can go negative, which is physically impossible. Adding nn.ReLU()
+as the final layer killed training: loss frozen at train 0.03485 / val 0.03094
+from epoch 1 through 10, identical to five decimals. The output went negative
+early, ReLU zeroed the gradient, and no gradient reached the network - the
+dead ReLU problem. Reverted; negatives are clamped at prediction time instead.

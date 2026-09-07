@@ -36,7 +36,10 @@ def predict(model, X, norm, device, batch_size=512):
         for i in range(0, len(Xn), batch_size):
             xb = torch.from_numpy(Xn[i:i + batch_size]).to(device)
             out.append(model(xb).cpu().numpy())
-    return norm.inverse_target(np.concatenate(out))
+
+    # Appliance power cannot be negative. Clamped here rather than with an
+    # output ReLU: that killed the gradient and training froze immediately.
+    return np.maximum(norm.inverse_target(np.concatenate(out)), 0.0)
 
 
 def sweep_threshold(pred, truth, appliance, lo=250, hi=3000, step=50):
