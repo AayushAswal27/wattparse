@@ -19,7 +19,7 @@ import torch
 
 from src.data.align import align
 from src.data.windows import WINDOW, Normaliser, make_windows
-from src.evaluate.metrics import compare, score
+from src.evaluate.metrics import DEFAULT_THRESHOLDS, compare, score, to_states
 from src.models.seq2point import Seq2Point
 
 H5 = "data/raw/ukdale.h5"
@@ -37,6 +37,34 @@ def predict(model, X, norm, device, batch_size=512):
             xb = torch.from_numpy(Xn[i:i + batch_size]).to(device)
             out.append(model(xb).cpu().numpy())
     return norm.inverse_target(np.concatenate(out))
+
+
+def sweep_threshold(pred, truth, appliance, lo=250, hi=3000, step=50):
+    """F1 across candidate decision thresholds.
+
+    The on_power in metrics.py is for interpreting ground truth. Turning a
+    noisy regression into ON/OFF decisions is a different question and can
+    want a different number.
+
+    Sweep this on training-house data, then apply the winner once to the test
+    house. Sweeping on the test house and picking the best is tuning on test.
+    """
+    cfg = DEFAULT_THRESHOLDS[appliance]
+    tr = to_states(truth, cfg["on_power"], cfg["min_on_s"], cfg["min_off_s"])
+
+    rows = []
+    for t in range(lo, hi + 1, step):
+        p = to_states(pred, t, cfg["min_on_s"], cfg["min_off_s"])
+        tp = int((p & tr).sum())
+        fp = int((p & ~tr).sum())
+        fn = int((~p & tr).sum())
+        prec = tp / (tp + fp) if tp + fp else 0.0
+        rec = tp / (tp + fn) if tp + fn else 0.0
+        f1 = 2 * prec * rec / (prec + rec) if prec + rec else 0.0
+        rows.append({"threshold": t, "precision": round(prec, 3),
+                     "recall": round(rec, 3), "f1": round(f1, 3),
+                     "tp": tp, "fp": fp, "fn": fn})
+    return pd.DataFrame(rows)
 
 
 def main():

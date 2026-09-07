@@ -56,3 +56,23 @@ narrow receptive field can only see local event shape, which is the part
 that is universal across houses.
 
 Single run per config, one seed. Treat as suggestive, not established.
+
+## Decision threshold
+
+Predictions are a continuous regression, so turning them into ON/OFF states
+needs a decision threshold. This does not have to equal the on_power used to
+interpret ground truth.
+
+Swept 250-3000 W on held-out house 4 data (a training house, unseen period).
+Peak F1 0.790 at 1550 W, vs 0.724 at 1000 W. The peak is a plateau -
+1400-1650 W are all within 0.008 - so the choice is not fitted to noise.
+
+Applying 1550 W once to house 5:
+
+| Threshold | Precision | Recall | F1 | TP | FP | FN |
+|---|---|---|---|---|---|---|
+| 1000 W | 0.415 | 0.861 | 0.560 | 428 | 604 | 69 |
+| **1550 W** | **0.555** | 0.757 | **0.640** | 376 | 302 | 121 |
+
+The threshold was selected on house 4 and applied once to house 5, not
+swept on the test house.
