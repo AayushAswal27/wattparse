@@ -98,3 +98,46 @@ as the final layer killed training: loss frozen at train 0.03485 / val 0.03094
 from epoch 1 through 10, identical to five decimals. The output went negative
 early, ReLU zeroed the gradient, and no gradient reached the network - the
 dead ReLU problem. Reverted; negatives are clamped at prediction time instead.
+
+## Microwave: where the pipeline breaks
+
+Same pipeline, same protocol, house 5 test window 2014-08-01 to 09-01
+(445,802 samples, 382 positives = 0.086%).
+
+| Model | MAE (W) | SAE | Precision | Recall | F1 |
+|---|---|---|---|---|---|
+| CO | 330.4 | 6.51 | 0.006 | 0.997 | 0.011 |
+| FHMM | 592.5 | 11.66 | 0.001 | 1.000 | 0.002 |
+| seq2point @ 200 W | 70.1 | 0.28 | 0.012 | 0.895 | 0.024 |
+| seq2point @ 500 W | 70.1 | 0.28 | 0.025 | 0.743 | 0.049 |
+
+Threshold swept on house 4 (peak F1 0.536 at 500 W) and applied once to
+house 5, as for kettle.
+
+seq2point still beats both baselines on every metric, but 0.049 is not a
+working detector.
+
+### The transfer gap
+
+| Appliance | House 4 (train) | House 5 (test) | Drop |
+|---|---|---|---|
+| Kettle | 0.790 | 0.640 | -19% |
+| Microwave | 0.536 | 0.049 | -91% |
+
+The model learns microwave fine on training houses. It does not transfer.
+A kettle draws ~2900 W and stays visible above any household background;
+a microwave adds ~1500 W for 90 seconds to a house-5 baseline that already
+sits at 600-1000 W and swings by thousands, alongside loads the training
+houses never contained (electric oven, electric stove, server, NAS).
+
+There is also an arithmetic floor. At 0.086% positives, a 1% false-positive
+rate yields 4,450 false alarms against 382 real events, capping precision
+near 0.08 regardless of architecture. Reaching precision 0.5 would require a
+false-positive rate below 0.09%.
+
+### Implication for the commercial transfer argument
+
+This pipeline works on high-power, short-duration, distinctive loads and
+degrades sharply on low-power loads near the building's noise floor. For a
+commercial building, that suggests chillers, AHUs and large motors are
+plausible targets; small plug loads are not.
