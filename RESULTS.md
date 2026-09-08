@@ -3,8 +3,17 @@
 ## Protocol
 
 Train on UK-DALE houses 1-4, test on unseen house 5.
-Test window 2014-07-01 to 2014-07-08, 100,202 samples at 6s.
-Thresholds for state metrics: kettle on_power 1000 W, min_on 12 s.
+Per-house random splits are not used - with sliding windows they place
+near-duplicate samples on both sides and inflate results.
+
+Test window per appliance, because usage frequency differs by orders of
+magnitude:
+- kettle: 2014-07-01 to 07-08 (100,202 samples)
+- microwave, dish washer: 2014-08-01 to 09-01 (445,802 samples)
+
+House 5's microwave ran ~100 minutes across 4.5 months, so a single week can
+contain zero events and there is nothing to score against.
+
 Mains loaded as apparent power for all models.
 seq2point predictions are clamped to >= 0 W.
 
@@ -117,31 +126,10 @@ house 5, as for kettle.
 seq2point still beats both baselines on every metric, but 0.049 is not a
 working detector.
 
-### The transfer gap
-
-| Appliance | House 4 (train) | House 5 (test) | Drop |
-|---|---|---|---|
-| Kettle | 0.790 | 0.640 | -19% |
-| Microwave | 0.536 | 0.049 | -91% |
-
-The model learns microwave fine on training houses. It does not transfer.
-A kettle draws ~2900 W and stays visible above any household background;
-a microwave adds ~1500 W for 90 seconds to a house-5 baseline that already
-sits at 600-1000 W and swings by thousands, alongside loads the training
-houses never contained (electric oven, electric stove, server, NAS).
-
-There is also an arithmetic floor. At 0.086% positives, a 1% false-positive
+There is an arithmetic floor here. At 0.086% positives, a 1% false-positive
 rate yields 4,450 false alarms against 382 real events, capping precision
 near 0.08 regardless of architecture. Reaching precision 0.5 would require a
 false-positive rate below 0.09%.
-
-### Implication for the commercial transfer argument
-
-This pipeline works on high-power, short-duration, distinctive loads and
-degrades sharply on low-power loads near the building's noise floor. For a
-commercial building, that suggests chillers, AHUs and large motors are
-plausible targets; small plug loads are not.
-
 
 ## Three appliances: what transfers
 
@@ -206,3 +194,25 @@ Sample-level F1 for the same predictions is 0.456.
 The 1200 s minimum is a domain constraint, not a tuned parameter: a
 dishwasher cycle is longer than 20 minutes, so shorter detections are noise
 regardless of what the model outputs.
+
+## End-to-end waste detection
+
+seq2point -> runs -> occupancy flagging. Dish washer, house 5, August 2014.
+Occupancy declared as 07:00-23:00 weekdays, 08:00-24:00 weekends, local time.
+
+| | Runs | Waste runs | Total kWh | Wasted kWh | Worst hour |
+|---|---|---|---|---|---|
+| Predicted | 23 | 1 | 11.95 | 0.482 | 23:00 |
+| Actual | 13 | 1 | 13.43 | 1.052 | 23:00 |
+
+The single detected waste run (2014-08-01 23:25 local) is the real one.
+
+A run counts as waste only if it STARTED outside occupancy hours. Fraction-
+outside alone flagged a cycle started at 22:52 that overran past 23:00 - a
+person was awake to start it, so it is not waste. Start time is the test that
+matches the business question.
+
+Limitations: total energy is 11% low and detected waste energy 54% low,
+because the model catches part of each run rather than all of it. And house 5
+had exactly one out-of-hours dishwasher cycle in the month, so this validates
+the plumbing rather than the detector's accuracy.
