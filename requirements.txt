@@ -6,3 +6,5 @@ pyyaml
 jupyterlab
 pytest
 torch
+streamlit
+streamlit
