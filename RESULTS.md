@@ -216,3 +216,40 @@ Limitations: total energy is 11% low and detected waste energy 54% low,
 because the model catches part of each run rather than all of it. And house 5
 had exactly one out-of-hours dishwasher cycle in the month, so this validates
 the plumbing rather than the detector's accuracy.
+
+## Failed experiment: LSTM state model
+
+Hypothesis: converting seq2point's noisy power to ON/OFF with a fixed
+threshold decides each timestep in isolation - the same weakness that makes
+CO fire on long plateaus. A bidirectional LSTM carries state and should
+learn that a dishwasher stays on once started.
+
+Setup: 2-layer bidirectional LSTM, 133,761 parameters, 512-sample sequences
+(~51 min). Trained on seq2point's predictions over held-out periods of house
+1, validated on house 2 - so it learns to clean up this model's actual error
+pattern, not idealised power. BCEWithLogitsLoss with pos_weight.
+
+Result, sample-level F1 on house 2:
+
+| Method | F1 | Precision | Recall |
+|---|---|---|---|
+| **Threshold @ 100 W** | **0.868** | 0.891 | 0.846 |
+| Threshold @ 50 W | 0.791 | 0.696 | 0.916 |
+| LSTM, pos_weight 40.5 (inverse freq) | 0.643 | 0.477 | 0.987 |
+| LSTM, pos_weight 10 | 0.643 | 0.477 | 0.987 |
+| LSTM, pos_weight 5 | 0.641 | 0.474 | 0.987 |
+
+Every LSTM configuration converged to the same failure: recall ~0.99,
+precision ~0.47. It fires on anything, which is what a class-weighted loss
+rewards when positives are 2.4% of samples. Lowering pos_weight from 40.5 to
+5 did not change the converged solution.
+
+One observation not counted as a result: at epoch 2 of the pos_weight 5 run,
+val F1 reached 0.805 with precision 0.997, then collapsed to 0.48 precision
+by epoch 3. Checkpointing on validation loss rather than F1 meant this state
+was not saved - lower BCE loss corresponded to worse F1. The two objectives
+disagree here.
+
+Conclusion: the threshold wins. seq2point's output is clean enough that
+sequence modelling adds nothing, and the fixed rule is more stable than a
+learned one on this task.
