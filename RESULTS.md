@@ -253,3 +253,27 @@ disagree here.
 Conclusion: the threshold wins. seq2point's output is clean enough that
 sequence modelling adds nothing, and the fixed rule is more stable than a
 learned one on this task.
+
+## Costing output
+
+Full pipeline on house 5, August 2014. Tariff is an illustrative Delhi
+commercial ToD structure: base INR 8.50/kWh, +20% 17:00-23:00, -20%
+23:00-06:00. The consumption data is residential UK, so these figures
+demonstrate the costing method rather than reproduce a real bill.
+
+| | Runs | Waste runs | Total energy | Wasted | Annualised |
+|---|---|---|---|---|---|
+| Detected | 23 | 1 | 11.95 kWh (INR 111.99) | 0.48 kWh (INR 3.28) | INR 38.62 |
+| Actual | 13 | 1 | 13.43 kWh (INR 124.88) | 1.05 kWh (INR 7.16) | INR 84.30 |
+
+The right event is found - detected 23:25, actual 23:14 - but only 23 of its
+85 minutes are captured, so the cost is understated by 54%. Total monthly
+energy is within 10%, so the aggregate picture is more reliable than any
+individual run boundary.
+
+The overnight off-peak rebate applies here: this waste is billed at INR
+6.80/kWh rather than 8.50, which reduces the figure. A costing head that
+only inflated the number would not be useful for deciding where to spend.
+
+The absolute amounts are small because one domestic dishwasher is a small
+load. The method scales with load size, not with itself.

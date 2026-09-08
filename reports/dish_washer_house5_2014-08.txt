@@ -1,0 +1,11 @@
+DISH WASHER - waste findings
+tariff: Delhi commercial ToD (illustrative), base INR 8.5/kWh
+
+  runs observed        23
+  outside hours        1
+  total energy         11.95 kWh  (INR 111.99)
+  wasted energy        0.48 kWh  (INR 3.28)
+  annualised waste     INR 38.62  (from 31 days observed)
+
+  worst findings:
+    2014-08-01 23:25   23 min   0.48 kWh  INR   3.28  @ 6.80/kWh
