@@ -24,10 +24,15 @@ class OccupancySchedule:
 
     Timestamps in this project are UTC. August in the UK is BST, so 03:00 UTC
     is 04:00 local - running this on UTC would shift every finding by an hour.
+
+    grace_min is tolerance either side of the window. Without it, a kettle
+    boiled seven minutes before the declared opening time gets reported as
+    waste, which is technically correct and practically noise.
     """
     weekday: tuple[int, int] = (7, 23)      # 07:00 to 23:00
     weekend: tuple[int, int] = (8, 24)
     tz: str = DATASET_TZ
+    grace_min: float = 15
     holidays: set = field(default_factory=set)   # dates with no occupancy
 
     def window_for(self, ts):
@@ -37,13 +42,14 @@ class OccupancySchedule:
         return self.weekend if ts.weekday() >= 5 else self.weekday
 
     def is_occupied(self, ts):
-        """Is this single instant inside occupancy hours?"""
+        """Is this single instant inside occupancy hours, allowing grace?"""
         local = ts.tz_convert(self.tz)
         w = self.window_for(local)
         if w is None:
             return False
         hour = local.hour + local.minute / 60
-        return w[0] <= hour < w[1]
+        g = self.grace_min / 60
+        return (w[0] - g) <= hour < (w[1] + g)
 
     def occupied_fraction(self, start, end, period_s=60):
         """Fraction of a run that falls inside occupancy hours.
@@ -54,15 +60,7 @@ class OccupancySchedule:
         idx = pd.date_range(start, end, freq=f"{period_s}s", tz=start.tz)
         if len(idx) == 0:
             return 0.0
-        local = idx.tz_convert(self.tz)
-        inside = 0
-        for ts in local:
-            w = self.window_for(ts)
-            if w is None:
-                continue
-            hour = ts.hour + ts.minute / 60
-            if w[0] <= hour < w[1]:
-                inside += 1
+        inside = sum(1 for ts in idx if self.is_occupied(ts))
         return inside / len(idx)
 
 

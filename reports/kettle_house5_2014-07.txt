@@ -1,0 +1,11 @@
+KETTLE - waste findings
+tariff: Delhi commercial ToD (illustrative), base INR 8.5/kWh
+
+  runs observed        35
+  outside hours        1
+  total energy         2.44 kWh  (INR 22.31)
+  wasted energy        0.04 kWh  (INR 0.30)
+  annualised waste     INR 15.64  (from 7 days observed)
+
+  worst findings:
+    2014-07-01 23:42    1 min   0.04 kWh  INR   0.30  @ 6.89/kWh
