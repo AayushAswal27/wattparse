@@ -1,6 +1,6 @@
 """Score a trained seq2point model on the held-out house.
 
-    python -m src.evaluate.cross_house --appliance kettle
+    python -m src.evaluate.cross_house --appliance kettle --test-house 5
 
 Loads the checkpoint's normaliser rather than refitting - refitting on the
 test house would leak its distribution into the numbers. No balancing here
@@ -23,17 +23,23 @@ from src.evaluate.metrics import DEFAULT_THRESHOLDS, compare, score, to_states
 from src.models.seq2point import Seq2Point
 
 H5 = "data/raw/ukdale.h5"
-TEST_HOUSE = 5
 
-# Per appliance: usage frequency differs by orders of magnitude, so a single
-# shared window doesn't work. House 5's microwave ran ~100 minutes across
-# 4.5 months, so a week can contain zero events.
+# Per (test house, appliance): usage frequency differs by orders of
+# magnitude, so a single shared window does not work. House 5's microwave
+# ran ~100 minutes across 4.5 months, so a week can contain zero events.
 TEST_WINDOWS = {
-    "kettle": ("2014-07-01", "2014-07-08"),
-    "microwave": ("2014-08-01", "2014-09-01"),
-    "dish washer": ("2014-08-01", "2014-09-01"),
-    "fridge freezer": ("2014-07-01", "2014-07-08"),
-    "washer dryer": ("2014-08-01", "2014-09-01"),
+    5: {
+        "kettle": ("2014-07-01", "2014-07-08"),
+        "microwave": ("2014-08-01", "2014-09-01"),
+        "dish washer": ("2014-08-01", "2014-09-01"),
+        "fridge freezer": ("2014-07-01", "2014-07-08"),
+        "washer dryer": ("2014-08-01", "2014-09-01"),
+    },
+    2: {
+        "kettle": ("2013-06-01", "2013-06-08"),
+        "microwave": ("2013-06-01", "2013-07-01"),
+        "dish washer": ("2013-06-01", "2013-07-01"),
+    },
 }
 
 
@@ -83,13 +89,21 @@ def sweep_threshold(pred, truth, appliance, lo=250, hi=3000, step=50):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--appliance", default="kettle")
+    ap.add_argument("--test-house", type=int, default=5)
     ap.add_argument("--checkpoint", default=None)
     args = ap.parse_args()
 
     appliance = args.appliance
+    test_house = args.test_house
     slug = appliance.replace(" ", "_")
-    ckpt_path = Path(args.checkpoint or ("models/seq2point_%s.pt" % slug))
-    test_start, test_end = TEST_WINDOWS[appliance]
+    suffix = "" if test_house == 5 else "_h%d" % test_house
+
+    ckpt_path = Path(args.checkpoint
+                     or ("models/seq2point_%s%s.pt" % (slug, suffix)))
+    if appliance not in TEST_WINDOWS.get(test_house, {}):
+        raise SystemExit("no test window configured for %s on house %d"
+                         % (appliance, test_house))
+    test_start, test_end = TEST_WINDOWS[test_house][appliance]
 
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
@@ -100,9 +114,11 @@ def main():
     print("loaded %s (trained on %s)" % (ckpt_path, ckpt["appliance"]))
     print("normaliser:", {k: round(v, 1) for k, v in norm.to_dict().items()})
 
-    df = align(H5, TEST_HOUSE, appliance, start=test_start, end=test_end)
+    df = align(H5, test_house, appliance, start=test_start, end=test_end)
+    if df.empty:
+        raise SystemExit("no data for house %d in that window" % test_house)
     X, y = make_windows(df, appliance, stride=1)
-    print("house %d: %d windows" % (TEST_HOUSE, len(X)))
+    print("house %d: %d windows" % (test_house, len(X)))
 
     # Window i predicts the sample at i + WINDOW//2, so predictions land on
     # that slice of the original index - not on df.index[:len(pred)].
@@ -113,12 +129,12 @@ def main():
     truth = pd.Series(y, index=idx, name="truth")
 
     print("\nseq2point on house %d, %s to %s"
-          % (TEST_HOUSE, test_start, test_end))
+          % (test_house, test_start, test_end))
     print(pd.DataFrame([score(pred, truth, appliance)]).round(3).to_string(index=False))
 
-    # Baselines cover the same window but the full index, so join on ours.
+    # Baselines only exist for the default split.
     base_path = Path("data/processed/baseline_%s.csv" % slug)
-    if base_path.exists():
+    if test_house == 5 and base_path.exists():
         base = pd.read_csv(base_path, index_col=0, parse_dates=True)
         base.index = base.index.tz_convert(idx.tz)
         base = base.reindex(idx)
@@ -127,11 +143,8 @@ def main():
                        "FHMM": base["FHMM"],
                        "seq2point": pred},
                       truth, appliance).round(3).to_string())
-    else:
-        print("\nno baseline csv at %s - run src/models/baselines.py first"
-              % base_path)
 
-    out = Path("data/processed/seq2point_%s_house%d.csv" % (slug, TEST_HOUSE))
+    out = Path("data/processed/seq2point_%s_house%d.csv" % (slug, test_house))
     pd.DataFrame({"truth": truth, "seq2point": pred}).to_csv(out)
     print("\nwrote", out)
 

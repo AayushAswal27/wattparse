@@ -1,0 +1,87 @@
+=== TRAIN kettle (test house 2) ===
+device: mps | seed: 0
+building windows for 'kettle' (test house 2)
+  house 1: 75146 train / 18787 val
+  house 3: 2956 train / 740 val
+  house 4: 42168 train / 10542 val
+  house 5: 10164 train / 2541 val
+train 130434 / val 32610
+Seq2Point window=599 dilations=(1, 1, 1, 1, 1) RF=30 params=30,554,649 (conv 37,400, head 30,517,249)
+epoch  1  train 0.02026  val 0.00562  53s  <- saved
+epoch  2  train 0.00383  val 0.00446  52s  <- saved
+epoch  3  train 0.00325  val 0.00372  50s  <- saved
+epoch  4  train 0.00291  val 0.00342  53s  <- saved
+epoch  5  train 0.00259  val 0.00364  52s
+epoch  6  train 0.00229  val 0.00457  61s
+epoch  7  train 0.00207  val 0.00350  57s
+epoch  8  train 0.00172  val 0.00364  58s
+epoch  9  train 0.00146  val 0.00379  59s
+epoch 10  train 0.00140  val 0.00422  59s
+best val loss 0.00342 -> models/seq2point_kettle_h2.pt
+=== TRAIN dish washer (test house 2) ===
+device: mps | seed: 0
+building windows for 'dish washer' (test house 2)
+  house 1: 292639 train / 73160 val
+  house 5: 121900 train / 30476 val
+train 414539 / val 103636
+Seq2Point window=599 dilations=(1, 1, 1, 1, 1) RF=30 params=30,554,649 (conv 37,400, head 30,517,249)
+epoch  1  train 0.00474  val 0.00285  164s  <- saved
+epoch  2  train 0.00140  val 0.00143  209s  <- saved
+epoch  3  train 0.00093  val 0.00161  188s
+epoch  4  train 0.00071  val 0.00133  176s  <- saved
+epoch  5  train 0.00061  val 0.00141  181s
+epoch  6  train 0.00062  val 0.00132  192s  <- saved
+epoch  7  train 0.00036  val 0.00172  201s
+epoch  8  train 0.00114  val 0.00156  194s
+epoch  9  train 0.00048  val 0.00141  241s
+epoch 10  train 0.00034  val 0.00156  224s
+best val loss 0.00132 -> models/seq2point_dish_washer_h2.pt
+=== TRAIN microwave (test house 2) ===
+device: mps | seed: 0
+building windows for 'microwave' (test house 2)
+  house 1: 44755 train / 11189 val
+  house 4: 82891 train / 20723 val
+  house 5: 3225 train / 807 val
+train 130871 / val 32719
+Seq2Point window=599 dilations=(1, 1, 1, 1, 1) RF=30 params=30,554,649 (conv 37,400, head 30,517,249)
+epoch  1  train 0.02537  val 0.00640  55s  <- saved
+epoch  2  train 0.00675  val 0.00529  53s  <- saved
+epoch  3  train 0.00542  val 0.00502  67s  <- saved
+epoch  4  train 0.00444  val 0.00467  62s  <- saved
+epoch  5  train 0.00359  val 0.00422  60s  <- saved
+epoch  6  train 0.00270  val 0.00413  65s  <- saved
+epoch  7  train 0.00187  val 0.00452  62s
+epoch  8  train 0.00144  val 0.00455  62s
+epoch  9  train 0.00108  val 0.00406  67s  <- saved
+epoch 10  train 0.00082  val 0.00402  62s  <- saved
+best val loss 0.00402 -> models/seq2point_microwave_h2.pt
+=== EVAL kettle (test house 2) ===
+loaded models/seq2point_kettle_h2.pt (trained on kettle)
+normaliser: {'mains_mean': 450.5, 'mains_std': 547.7, 'target_max': 2958.0}
+house 2: 100201 windows
+
+seq2point on house 2, 2013-06-01 to 2013-06-08
+appliance  on_power    mae   sae  precision  recall  f1   tp  fp  fn
+   kettle      1000 22.453 0.361      0.823   0.992 0.9 1024 220   8
+
+wrote data/processed/seq2point_kettle_house2.csv
+=== EVAL dish washer (test house 2) ===
+loaded models/seq2point_dish_washer_h2.pt (trained on dish washer)
+normaliser: {'mains_mean': 488.5, 'mains_std': 524.3, 'target_max': 2372.0}
+house 2: 431402 windows
+
+seq2point on house 2, 2013-06-01 to 2013-07-01
+  appliance  on_power    mae   sae  precision  recall    f1    tp    fp  fn
+dish washer        10 21.582 0.211      0.178   0.999 0.302 13284 61322  16
+
+wrote data/processed/seq2point_dish_washer_house2.csv
+=== EVAL microwave (test house 2) ===
+loaded models/seq2point_microwave_h2.pt (trained on microwave)
+normaliser: {'mains_mean': 440.1, 'mains_std': 547.5, 'target_max': 2209.3}
+house 2: 431402 windows
+
+seq2point on house 2, 2013-06-01 to 2013-07-01
+appliance  on_power    mae   sae  precision  recall    f1   tp    fp  fn
+microwave       200 27.932 3.142      0.162   0.971 0.278 2247 11601  66
+
+wrote data/processed/seq2point_microwave_house2.csv
