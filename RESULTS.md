@@ -277,3 +277,24 @@ only inflated the number would not be useful for deciding where to spend.
 
 The absolute amounts are small because one domestic dishwasher is a small
 load. The method scales with load size, not with itself.
+
+### Seed variance
+
+Three seeds (0, 1, 2), same config, kettle house 5:
+
+| Threshold | F1 mean ± std |
+|---|---|
+| 1000 W | 0.538 ± 0.018 |
+| **1550 W** | **0.615 ± 0.004** |
+
+The swept threshold is not only better, it is far more stable across seeds
+(± 0.004 vs ± 0.018). At 1000 W the model sits in a region where random
+initialisation changes the decision; at 1550 W it does not.
+
+MAE varies more than F1 does: 28.4, 35.3, 41.9 W across the three seeds, a
+47% spread. SAE ranges 1.19 to 2.11. The energy estimate is less stable than
+the detection, which matters because Phase 5 costing depends on energy, not
+on F1.
+
+An earlier single run reported 0.640. That was the top of the seed range,
+not the mean.
