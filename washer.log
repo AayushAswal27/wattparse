@@ -1,0 +1,27 @@
+=== TRAIN washer dryer (stride 24) ===
+device: mps | seed: 0
+building windows for 'washer dryer' (test house 5)
+  house 1: 137592 train / 34398 val
+train 137592 / val 34398
+Seq2Point window=599 dilations=(1, 1, 1, 1, 1) RF=30 params=30,554,649 (conv 37,400, head 30,517,249)
+epoch  1  train 0.01904  val 0.00344  57s  <- saved
+epoch  2  train 0.00157  val 0.00247  56s  <- saved
+epoch  3  train 0.00119  val 0.00162  54s  <- saved
+epoch  4  train 0.00092  val 0.00174  57s
+epoch  5  train 0.00080  val 0.00154  53s  <- saved
+epoch  6  train 0.00066  val 0.00135  53s  <- saved
+epoch  7  train 0.00050  val 0.00142  53s
+epoch  8  train 0.00046  val 0.00151  53s
+epoch  9  train 0.00038  val 0.00166  56s
+epoch 10  train 0.00031  val 0.00136  58s
+best val loss 0.00135 -> models/seq2point_washer_dryer.pt
+=== EVAL washer dryer ===
+loaded models/seq2point_washer_dryer.pt (trained on washer dryer)
+normaliser: {'mains_mean': 370.1, 'mains_std': 432.5, 'target_max': 2029.0}
+house 5: 445802 windows
+
+seq2point on house 5, 2014-08-01 to 2014-09-01
+   appliance  on_power    mae   sae  precision  recall    f1   tp    fp   fn
+washer dryer        20 61.429 0.608       0.15   0.389 0.217 4574 25891 7174
+
+wrote data/processed/seq2point_washer_dryer_house5.csv
