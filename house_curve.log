@@ -1,0 +1,29 @@
+subsets: [[1], [1, 2], [1, 2, 4], [1, 2, 4, 3]]
+
+=== training on houses [1] ===
+$ /Users/aayushaswal/wattparse/.venv/bin/python -m src.models.train --appliance kettle --test-house 5 --only-houses 1 --epochs 10 --keep-off-ratio 20.0 --stride 12 --tag curve1
+$ /Users/aayushaswal/wattparse/.venv/bin/python -m src.evaluate.cross_house --appliance kettle --test-house 5 --checkpoint models/seq2point_kettle_curve1.pt
+  -> F1 0.451
+
+=== training on houses [1, 2] ===
+$ /Users/aayushaswal/wattparse/.venv/bin/python -m src.models.train --appliance kettle --test-house 5 --only-houses 1,2 --epochs 10 --keep-off-ratio 20.0 --stride 12 --tag curve12
+$ /Users/aayushaswal/wattparse/.venv/bin/python -m src.evaluate.cross_house --appliance kettle --test-house 5 --checkpoint models/seq2point_kettle_curve12.pt
+  -> F1 0.560
+
+=== training on houses [1, 2, 4] ===
+$ /Users/aayushaswal/wattparse/.venv/bin/python -m src.models.train --appliance kettle --test-house 5 --only-houses 1,2,4 --epochs 10 --keep-off-ratio 20.0 --stride 12 --tag curve124
+$ /Users/aayushaswal/wattparse/.venv/bin/python -m src.evaluate.cross_house --appliance kettle --test-house 5 --checkpoint models/seq2point_kettle_curve124.pt
+  -> F1 0.547
+
+=== training on houses [1, 2, 4, 3] ===
+$ /Users/aayushaswal/wattparse/.venv/bin/python -m src.models.train --appliance kettle --test-house 5 --only-houses 1,2,4,3 --epochs 10 --keep-off-ratio 20.0 --stride 12 --tag curve1243
+$ /Users/aayushaswal/wattparse/.venv/bin/python -m src.evaluate.cross_house --appliance kettle --test-house 5 --checkpoint models/seq2point_kettle_curve1243.pt
+  -> F1 0.548
+
+ n_houses       houses   mae   sae  precision   recall       f1
+        1          [1] 36.27 1.375   0.322357 0.748491 0.450636
+        2       [1, 2] 25.21 0.873   0.422998 0.828974 0.560163
+        3    [1, 2, 4] 27.48 1.103   0.398531 0.873239 0.547289
+        4 [1, 2, 4, 3] 36.50 1.778   0.395722 0.893360 0.548487
+
+wrote data/processed/house_curve.json
