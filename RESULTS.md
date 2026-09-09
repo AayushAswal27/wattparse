@@ -336,3 +336,43 @@ House 5's August contains no genuine out-of-hours dishwasher runs under this
 schedule, so there is nothing in this window to validate the waste detector
 against. The costing and occupancy logic are exercised end to end; their
 accuracy on real waste events is untested.
+
+## Two test houses: the building matters more than the appliance
+
+Same models, same protocol, threshold swept on a held-out period of house 1
+and applied once to each test house.
+
+| Appliance | Peak W | House 5 F1 | House 2 F1 | Gap |
+|---|---|---|---|---|
+| Kettle | 2900 | 0.615 | **0.904** | +0.29 |
+| Dish washer | 1730 | 0.456 | **0.747** | +0.29 |
+| Microwave | 1500 | 0.049 | **0.478** | +0.43 |
+
+The appliance ordering holds in both houses - higher power and longer runs
+score better. But the level is set by the test building, and that effect is
+larger than the appliance effect.
+
+House 5 has 26 meters and 22 appliances including an electric oven, electric
+stove, server computer and NAS. Its aggregate baseline sits at 600-1000 W and
+swings by thousands. House 2 has 20 meters and 17 appliances and is quieter.
+
+The quieter building helps the weakest appliance most: microwave gains 0.43,
+the high-power kettle only 0.29.
+
+### Correction to an earlier conclusion
+
+An earlier draft attributed the microwave failure to power and duration alone,
+and argued an arithmetic floor at 0.086% positives capped precision near 0.08
+regardless of architecture. House 2's microwave reaches precision 0.454. That
+floor was a property of house 5's event rate in that specific window, not of
+microwaves.
+
+The correct statement is that viability depends on appliance power relative to
+the test building's noise floor - a ratio, not either term alone.
+
+### Thresholds transfer even when scores do not
+
+Swept on house 1, the winning thresholds were 1500 W (kettle), 100 W (dish
+washer) and 950 W (microwave). House 5's sweep gave 1550 W and 100 W for the
+first two. The decision boundary is a property of the model, not of the test
+house; the achievable score is a property of the test house.
