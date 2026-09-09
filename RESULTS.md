@@ -298,3 +298,41 @@ on F1.
 
 An earlier single run reported 0.640. That was the top of the seed range,
 not the mean.
+
+## Run extension
+
+Detected runs come out short: the model's output dips below threshold at the
+edges of a real run while holding above it in the middle. `extend_runs` walks
+each detected run outward while the raw aggregate stays one appliance-power
+above a local baseline (20th percentile over a 3-hour window, so the run
+itself does not contaminate the baseline).
+
+Dish washer, house 5, August 2014:
+
+| | Total energy | vs actual 13.43 kWh |
+|---|---|---|
+| No extension | 11.95 kWh | -11.0% |
+| **margin 1.0** | **13.95 kWh** | **+3.9%** |
+| margin 1.5 | 12.79 kWh | -4.8% |
+| margin 0.5 | 19.35 kWh | +44.1% |
+
+margin 1.0 is the principled value - extend while the aggregate holds a full
+appliance-power above baseline - not a tuned one. The other rows are a
+sensitivity check.
+
+Run boundaries are still wrong: mean detected duration is ~1980 s against a
+true ~5300 s for most cycles. The energy total is close because the model
+finds a shorter, higher-power slice. Accurate on the metric that matters for
+costing, not on the boundaries.
+
+## The single waste finding is a false positive
+
+Ground truth for the flagged run starts at 23:14:48 BST. Occupancy closes at
+23:00 with 15 minutes grace, so the real run began 12 seconds inside the
+window and is not waste. The model detects it at 23:25 - eleven minutes late -
+which puts it outside.
+
+House 5's August contains no genuine out-of-hours dishwasher runs under this
+schedule, so there is nothing in this window to validate the waste detector
+against. The costing and occupancy logic are exercised end to end; their
+accuracy on real waste events is untested.

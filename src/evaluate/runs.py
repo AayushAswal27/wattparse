@@ -94,3 +94,57 @@ def run_scores(detected, actual, tolerance_s=300):
             "tp": tp, "fp": n_fp, "fn": n_fn,
             "precision": round(prec, 3), "recall": round(rec, 3),
             "f1": round(f1, 3)}
+
+def extend_runs(runs, mains, margin=0.5, max_extend_s=3600, period_s=6,
+                context_s=10800):
+    """Widen detected runs to where the aggregate stops showing the load.
+
+    The model's prediction falls below threshold near the edges of a real run
+    while staying above it in the middle, so detected runs come out short and
+    their energy is understated. The aggregate meter does not have that
+    problem: it is the raw signal.
+
+    For each run, walk outward while mains stays `margin` x the run's mean
+    appliance power above the local baseline.
+
+    Baseline is a low percentile over a wide window around the run, not the
+    mean of the hour before. The hour before a *detected* run is often still
+    inside the real run - that is the whole problem being fixed - so an
+    adjacent window is contaminated by the very load being measured.
+    """
+    if runs.empty:
+        return runs
+
+    out = runs.copy()
+    steps = int(max_extend_s // period_s)
+    ctx = int(context_s // period_s)
+    vals = mains.to_numpy()
+    index = mains.index
+
+    starts, ends = [], []
+    for r in out.itertuples():
+        i0 = index.searchsorted(r.start)
+        i1 = index.searchsorted(r.end)
+
+        lo, hi = max(0, i0 - ctx), min(len(vals), i1 + ctx)
+        baseline = float(np.percentile(vals[lo:hi], 20))
+        floor = baseline + margin * r.mean_w
+
+        j = i0
+        while j > 0 and i0 - j < steps and vals[j - 1] > floor:
+            j -= 1
+        k = i1
+        while k < len(vals) - 1 and k - i1 < steps and vals[k + 1] > floor:
+            k += 1
+
+        starts.append(index[j])
+        ends.append(index[k])
+
+    out["start"], out["end"] = starts, ends
+    out["duration_s"] = [
+        int((e - s).total_seconds()) + period_s for s, e in zip(starts, ends)
+    ]
+    # Energy over the widened span at the run's own mean power: the model
+    # gives amplitude reliably, only the boundaries are wrong.
+    out["energy_kwh"] = out["mean_w"] * out["duration_s"] / 3_600_000
+    return out

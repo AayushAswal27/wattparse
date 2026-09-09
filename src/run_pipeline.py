@@ -23,7 +23,7 @@ from src.data.windows import WINDOW, Normaliser, make_windows
 from src.detect.waste import OccupancySchedule, flag_runs
 from src.evaluate.cross_house import predict
 from src.evaluate.metrics import DEFAULT_THRESHOLDS
-from src.evaluate.runs import extract_runs, run_scores
+from src.evaluate.runs import extend_runs, extract_runs, run_scores
 from src.models.seq2point import Seq2Point
 
 H5 = "data/raw/ukdale.h5"
@@ -52,6 +52,10 @@ def main():
     ap.add_argument("--open-hour", type=float, default=7)
     ap.add_argument("--close-hour", type=float, default=23)
     ap.add_argument("--rate", type=float, default=8.50)
+    ap.add_argument("--margin", type=float, default=1.0,
+                    help="run extension: multiples of appliance power above "
+                         "baseline that mains must hold")
+    ap.add_argument("--no-extend", action="store_true")
     ap.add_argument("--truth", action="store_true",
                     help="also score against the appliance submeter")
     args = ap.parse_args()
@@ -83,6 +87,12 @@ def main():
 
     runs = extract_runs(pred, cfg["threshold"],
                         min_duration_s=cfg["min_duration_s"])
+    if not args.no_extend:
+        # The model's output dips below threshold at the edges of a real run
+        # while holding above it in the middle, so detected runs are short and
+        # their energy is understated. The raw aggregate has no such problem.
+        runs = extend_runs(runs, df["mains"].reindex(idx), margin=args.margin)
+
     schedule = OccupancySchedule(weekday=(args.open_hour, args.close_hour),
                                  weekend=(args.open_hour + 1, 24))
     tariff = ToDTariff(base_rate=args.rate)
@@ -96,10 +106,13 @@ def main():
 
     if args.truth:
         tcfg = DEFAULT_THRESHOLDS[appliance]
-        actual = extract_runs(pd.Series(y, index=idx), tcfg["on_power"],
+        truth = pd.Series(y, index=idx)
+        actual = extract_runs(truth, tcfg["on_power"],
                               min_duration_s=cfg["min_duration_s"] // 2)
         print()
         print("run-level accuracy vs submeter:", run_scores(runs, actual))
+        print("energy: predicted %.2f kWh vs actual %.2f kWh"
+              % (priced["energy_kwh"].sum(), actual["energy_kwh"].sum()))
 
     REPORT_DIR.mkdir(exist_ok=True)
     out = REPORT_DIR / ("%s_house%d_%s.txt" % (slug, args.house, args.start[:7]))
