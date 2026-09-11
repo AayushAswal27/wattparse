@@ -19,6 +19,31 @@ DISH WASHER - waste findings
     2014-08-01 23:25   23 min   0.48 kWh  INR 3.28  @ 6.80/kWh
 ```
 
+## The interface
+
+![WattParse interface](reports/streamlit-1.png)
+
+The top panel is the whole-building meter — every appliance in house 5 added
+together, which is the only signal a real deployment would have. The bottom
+panel is what the model pulls out of it: the dishwasher's own consumption in
+blue, with the true submeter reading in black for comparison. The shaded band
+marks a run that started outside occupancy hours.
+
+Occupancy hours and the tariff are adjustable in the sidebar. Changing them
+re-prices the findings without re-running the model.
+
+![Findings and accuracy against the submeter](reports/streamlit-2.png)
+
+Each finding is one run: when it started, how long it lasted, how much energy
+it used, and what that cost under a time-of-day tariff. The panel below is
+the honest part — house 5 is held out, so its submeter is available to score
+against. A real building has no submeter, which is the entire reason this
+method exists.
+
+```bash
+streamlit run app.py
+```
+
 ## Why this is hard
 
 Sub-metering every circuit costs lakhs and needs an electrician per panel, so
