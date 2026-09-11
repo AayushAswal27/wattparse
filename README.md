@@ -35,7 +35,7 @@ re-prices the findings without re-running the model.
 ![Findings and accuracy against the submeter](reports/streamlit-2.png)
 
 Each finding is one run: when it started, how long it lasted, how much energy
-it used, and what that cost under a time-of-day tariff. The panel below is
+it used, and what that cost under a time-of-day tariff. The accuracy panel is
 the honest part — house 5 is held out, so its submeter is available to score
 against. A real building has no submeter, which is the entire reason this
 method exists.
